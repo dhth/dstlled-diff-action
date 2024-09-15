@@ -1,0 +1,123 @@
+name: 'dstlled-diff'
+description: 'Action to generate dstlled diff, and, if requested, post a comment on a pull request'
+
+inputs:
+  starting-commit:
+    description: 'Starting commit for the diff'
+    required: true
+  ending-commit:
+    description: 'Ending commit for the diff'
+    required: true
+  pattern:
+    description: 'File pattern to get diff for'
+    required: false
+    default: '*'
+  directory:
+    description: 'Directory to operate in'
+    required: false
+    default: '.'
+  post-comment-on-pr:
+    description: 'Whether to post a comment containing the diff on the corresponding PR'
+    required: false
+    default: 'false'
+  save-diff-to-file:
+    description: 'Whether to save diff to a file'
+    required: false
+    default: 'false'
+
+outputs:
+  diff:
+    description: "diff"
+    value: ${{ steps.gen-diff.outputs.diff }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install dstll
+      uses: jaxxstorm/action-install-gh-release@v1.11.0
+      with:
+        repo: dhth/dstll
+        tag: v0.1.0
+
+    - name: Set GitHub Path
+      run: echo "$GITHUB_ACTION_PATH" >> $GITHUB_PATH
+      shell: bash
+      env:
+        GITHUB_ACTION_PATH: ${{ github.action_path }}
+
+    - name: Shorten commit hashes
+      id: shorten-hashes
+      shell: bash
+      env:
+        STARTING_COMMIT: ${{ inputs.starting-commit }}
+        ENDING_COMMIT: ${{ inputs.ending-commit }}
+      run: |
+        START=$(echo "${STARTING_COMMIT:0:8}")
+        END=$(echo "${ENDING_COMMIT:0:8}")
+        echo "start=$START" >> $GITHUB_OUTPUT
+        echo "end=$END" >> $GITHUB_OUTPUT
+
+    - name: run dstll
+      id: gen-diff
+      shell: bash
+      env:
+        PATTERN: ${{ inputs.pattern }}
+        STARTING_COMMIT: ${{ steps.shorten-hashes.outputs.start }}
+        ENDING_COMMIT: ${{ steps.shorten-hashes.outputs.end }}
+        DIRECTORY: ${{ inputs.directory }}
+      run: |
+        echo "diffing ${STARTING_COMMIT}..${ENDING_COMMIT} -- $PATTERN"
+        dstlled-diff "$DIRECTORY" diff.patch "$PATTERN" "$STARTING_COMMIT" "$ENDING_COMMIT"
+        {
+         echo 'diff<<EOF'
+         cat diff.patch
+         echo EOF
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Delete diff file
+      if: ${{ inputs.save-diff-to-file == 'false' }}
+      shell: bash
+      run: rm diff.patch
+
+    - uses: actions/github-script@v7
+      if: ${{ github.event_name == 'pull_request' && inputs.post-comment-on-pr == 'true' }}
+      with:
+        github-token: ${{ github.token }}
+        script: |
+          // 1. Retrieve existing bot comments for the PR
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          })
+          const botComment = comments.find(comment => {
+            return comment.user.type === 'Bot' && comment.body.includes('### dstlled-diff')
+          })
+
+          // 2. Prepare format of the comment
+          const output = `### dstlled-diff
+          > ${{ steps.shorten-hashes.outputs.start }}..${{ steps.shorten-hashes.outputs.end }} -- ${{ inputs.pattern }}
+          <details><summary> expand </summary>
+
+          \`\`\`diff\n
+          ${{ steps.gen-diff.outputs.diff }}
+          \`\`\`
+
+          </details>`;
+
+          // 3. If we have a comment, update it, otherwise create a new one
+          if (botComment) {
+            github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: output
+            })
+          } else {
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+          }

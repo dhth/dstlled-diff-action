@@ -1,0 +1,85 @@
+name: web-demo
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  PATTERN: '**.go'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    outputs:
+      diff: ${{ steps.get-dstlled-diff.outputs.diff }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: 'docker/compose'
+          path: 'repo'
+          fetch-depth: 101
+
+      - name: Get starting commit
+        id: get-starting-commit
+        working-directory: repo
+        run: |
+          echo "commit-short=$(git rev-parse --short HEAD~100)" >> $GITHUB_OUTPUT
+
+      - name: Get ending commit
+        id: get-ending-commit
+        working-directory: repo
+        run: |
+          echo "commit-short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - id: get-dstlled-diff
+        uses: dhth/dstlled-diff-action@v0.1.0
+        with:
+          directory: repo
+          pattern: '**.go'
+          starting-commit: ${{ steps.get-starting-commit.outputs.commit-short }}
+          ending-commit: ${{ steps.get-ending-commit.outputs.commit-short }}
+          save-diff-to-file: 'true'
+
+      - uses: actions/setup-node@v4
+        if: ${{ steps.get-dstlled-diff.outputs.diff != 'No changes detected' }}
+        with:
+          node-version: '20.x'
+
+      - name: Install diff2html-cli
+        if: ${{ steps.get-dstlled-diff.outputs.diff != 'No changes detected' }}
+        run: |
+          npm install -g diff2html-cli
+
+      - name: Generate webpage
+        if: ${{ steps.get-dstlled-diff.outputs.diff != 'No changes detected' }}
+        env:
+          DIFF: ${{ steps.get-dstlled-diff.outputs.diff }}
+        run: |
+          mkdir -p docs
+          diff2html --input file --title "dstlled-diff for docker/compose (${{ steps.get-starting-commit.outputs.commit-short }}..${{ steps.get-ending-commit.outputs.commit-short }} -- ${PATTERN})" --file docs/index.html -- diff.patch
+
+      - name: Upload artifact
+        if: ${{ steps.get-dstlled-diff.outputs.diff != 'No changes detected' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./docs
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: generate
+    steps:
+      - name: Deploy to GitHub Pages
+        if: ${{ needs.generate.outputs.diff != 'No changes detected' }}
+        id: deployment
+        uses: actions/deploy-pages@v4

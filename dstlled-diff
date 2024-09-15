@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [ $# -ne 5 ]; then
+    echo "Usage: $0 <workdir> <output_file> <pattern> <start> <end>"
+    echo "eg: $0 'somedir diff.patch **.go' startcommit endcommit"
+    exit 1
+fi
+
+wd="$1"
+output_file="$2"
+pattern="$3"
+start="$4"
+end="$5"
+
+cwd="$(pwd)"
+
+cd "${wd}"
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+temp_dir=$(mktemp -d)
+if [ ! -e ${temp_dir} ]; then
+    echo "Failed to create temporary directory."
+    exit 1
+fi
+
+changed=$(git diff --name-only "$start..$end" -- "$pattern")
+
+if [ -z "$changed" ]; then
+    echo "No changes detected" >"${cwd}/${output_file}"
+    exit 0
+fi
+
+git checkout "$start"
+files_start=$(git ls-files "$pattern")
+if [ -z "$files_start" ]; then
+    mkdir -p "${temp_dir}/$start"
+else
+    dstll write $files_start -o "${temp_dir}/$start" -q
+fi
+
+git checkout "$end"
+files_end=$(git ls-files "$pattern")
+if [ -z "$files_end" ]; then
+    mkdir -p "${temp_dir}/$end"
+else
+    dstll write $files_end -o "${temp_dir}/$end" -q
+fi
+
+git checkout $current_branch
+
+cd $temp_dir
+
+changed_dstlled=$(git diff --name-only --no-index --relative "$start" "$end" || true)
+if [ -z "$changed_dstlled" ]; then
+    echo "No changes detected" >"${cwd}/${output_file}"
+    exit 0
+fi
+
+git --no-pager diff --no-index --relative --unified=0 "$start" "$end" >"${cwd}/${output_file}" || true
