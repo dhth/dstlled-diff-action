@@ -1041,4 +1041,4 @@ The output of `dstlled-diff` can be rendered in a web view (see it running
 ![web-demo](https://github.com/user-attachments/assets/7e7e75ab-1e50-450f-82d6-a5d5fa7d834f)
 
 [1]: https://github.com/dhth/dstll
-[1]: https://dhth.github.io/dstlled-diff-action/
+[2]: https://dhth.github.io/dstlled-diff-action/
