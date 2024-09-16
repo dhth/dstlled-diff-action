@@ -1,5 +1,5 @@
 name: 'dstlled-diff'
-description: 'Action to generate dstlled diff, and, if requested, post a comment on a pull request'
+description: 'Github action to make reviewing large structural code changes easier'
 author: 'dhth'
 branding:
   color: 'blue'
