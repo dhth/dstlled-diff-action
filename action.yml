@@ -1,5 +1,9 @@
 name: 'dstlled-diff'
 description: 'Action to generate dstlled diff, and, if requested, post a comment on a pull request'
+author: 'dhth'
+branding:
+  color: 'blue'
+  icon: 'git-pull-request'
 
 inputs:
   starting-commit:
