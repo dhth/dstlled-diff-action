@@ -1,4 +1,11 @@
-# dstlled-diff action
+<p align="center">
+  <h1 align="center">dstlled-diff-action</h1>
+  <p align="center">
+    <a href="https://github.com/dhth/dstlled-diff-action/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/release/dhth/dstlled-diff-action.svg?logo=github&style=flat-square"></a>
+    <a href="https://github.com/marketplace/actions/dstlled-diff"><img alt="GitHub marketplace" src="https://img.shields.io/badge/marketplace-dstlled--diff--action-blue?logo=github&style=flat-square"></a>
+    <a href="https://dhth.github.io/dstlled-diff-action"><img alt="GitHub marketplace" src="https://img.shields.io/website?url=https%3A%2F%2Fdhth.github.io%2Fdstlled-diff-action&style=flat-square&label=web-demo"></a>
+  </p>
+</p>
 
 ✨ Overview
 ---
@@ -16,7 +23,7 @@ changes by removing diff components that do not alter signatures.
 Δ Difference to regular git diff
 ---
 
-Consider this git diff:
+👉 Consider this *(fairly long)* git diff:
 
 <details><summary> expand </summary>
 
@@ -899,7 +906,7 @@ index f13c6e7..381c448 100644
 
 </details>
 
-The "distilled-diff" version of the same diff looks like the following:
+👉 The "distilled-diff" version of the same diff looks like the following:
 
 <details><summary> expand </summary>
 
