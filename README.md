@@ -18,7 +18,7 @@ objects, etc.). It is powered by [dstll][1].
 The main goal of `dstlled-diff` is to simplify the review of structural code
 changes by removing diff components that do not alter signatures.
 
-![pr-comment](https://github.com/user-attachments/assets/808b43eb-76a7-4832-98e2-e6c85b3ddfe0)
+![Usage](https://tools.dhruvs.space/images/dstlled-diff/dstlled-diff-1.png)
 
 Δ Difference to regular git diff
 ---
@@ -1045,7 +1045,7 @@ The output of `dstlled-diff` can be rendered in a web view (see it running
 [here][2]), as seen in the image below. Code for this can be found
 [here](./.github/workflows/web-demo.yml).
 
-![web-demo](https://github.com/user-attachments/assets/7e7e75ab-1e50-450f-82d6-a5d5fa7d834f)
+![web-demo](https://tools.dhruvs.space/images/dstlled-diff/dstlled-diff-2.png)
 
 [1]: https://github.com/dhth/dstll
 [2]: https://dhth.github.io/dstlled-diff-action/
