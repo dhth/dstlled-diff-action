@@ -12,13 +12,22 @@
 
 `dstlled-diff` (short for "distilled-diff") is a GitHub action that processes a
 specific git revision range and generates a diff that only includes changes in
-the signatures of various code constructs (such as classes, functions, and
-objects, etc.). It is powered by [dstll][1].
+the signatures of "code constructs" *(functions, methods, classes, traits,
+interfaces, objects, type aliases, enums, etc.)*. It is powered by [dstll][1].
 
-The main goal of `dstlled-diff` is to simplify the review of structural code
-changes by removing diff components that do not alter signatures.
+The main goal of `dstlled-diff` is to simplify the review of large structural
+code changes by removing diff components that do not alter signatures.
 
 ![Usage](https://tools.dhruvs.space/images/dstlled-diff/dstlled-diff-1.png)
+
+📜 Languages supported
+---
+
+- ![go](https://img.shields.io/badge/go-grey?logo=go)
+- ![python](https://img.shields.io/badge/python-grey?logo=python)
+- ![rust](https://img.shields.io/badge/rust-grey?logo=rust)
+- ![scala 2](https://img.shields.io/badge/scala-grey?logo=scala)
+- more to come
 
 Δ Difference to regular git diff
 ---
