@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">dstlled-diff-action</h1>
+  <h1 align="center">dstlled-diff</h1>
   <p align="center">
     <a href="https://github.com/dhth/dstlled-diff-action/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/release/dhth/dstlled-diff-action.svg?logo=github&style=flat-square"></a>
     <a href="https://github.com/marketplace/actions/dstlled-diff"><img alt="GitHub marketplace" src="https://img.shields.io/badge/marketplace-dstlled--diff--action-blue?logo=github&style=flat-square"></a>
@@ -1019,7 +1019,7 @@ jobs:
           post-comment-on-pr: 'true'
 ```
 
-The "dstlled-diff" will be available as an output of the action, via
+The "distilled" diff will be available as an output of the action, via
 `steps.get-dstlled-diff.outputs.diff`.
 
 🔡 Inputs
@@ -1036,7 +1036,7 @@ Following inputs can be used as `step.with` keys:
 | `post-comment-on-pr` | Bool   | `false` | Post comment containing dstlled-diff to corresponding pull request |
 | `save-diff-to-file`  | Bool   | `false` | Save diff to a local file called `diff.patch`                      |
 
-⚙️ Use cases
+⚙️ Other use cases
 ---
 
 ### Web Interface
