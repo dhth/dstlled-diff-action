@@ -37,6 +37,369 @@ code changes by removing diff components that do not alter signatures.
 <details><summary> expand </summary>
 
 ```diff
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+index bb98703..b1b2a5c 100644
+--- a/.github/workflows/build.yml
++++ b/.github/workflows/build.yml
+@@ -1,35 +1,31 @@
+ name: build
+ 
+ on:
+   push:
+-    branches: [ "main" ]
++    branches: ["main"]
+   pull_request:
+     paths:
+       - "go.*"
+       - "**/*.go"
+       - ".github/workflows/*.yml"
+ 
+ permissions:
+   contents: read
+ 
+ env:
+-  GO_VERSION: '1.23.0'
++  GO_VERSION: '1.23.1'
+ 
+ jobs:
+   build:
+     strategy:
+       matrix:
+         os: [ubuntu-latest, macos-latest]
+     runs-on: ${{ matrix.os }}
+     steps:
+-    - uses: actions/checkout@v4
+-    - name: Set up Go
+-      uses: actions/setup-go@v5
+-      with:
+-        go-version: ${{ env.GO_VERSION }}
+-    - name: go build
+-      run: go build -v ./...
+-    - name: golangci-lint
+-      uses: golangci/golangci-lint-action@v6
+-      with:
+-        version: v1.60
++      - uses: actions/checkout@v4
++      - name: Set up Go
++        uses: actions/setup-go@v5
++        with:
++          go-version: ${{ env.GO_VERSION }}
++      - name: go build
++        run: go build -v ./...
+diff --git a/.github/workflows/dstlled-diff.yml b/.github/workflows/dstlled-diff.yml
+new file mode 100644
+index 0000000..7cbfcca
+--- /dev/null
++++ b/.github/workflows/dstlled-diff.yml
+@@ -0,0 +1,24 @@
++name: dstlled-diff
++
++on:
++  pull_request:
++    types: [opened, reopened, synchronize, ready_for_review]
++
++permissions:
++  contents: read
++  pull-requests: write
++
++jobs:
++  dstlled-diff:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++        with:
++          fetch-depth: 0
++      - id: get-dstlled-diff
++        uses: dhth/dstlled-diff-action@v0.1.2
++        with:
++          pattern: '**.go'
++          starting-commit: ${{ github.event.pull_request.base.sha }}
++          ending-commit: ${{ github.event.pull_request.head.sha }}
++          post-comment-on-pr: 'true'
+diff --git a/.github/workflows/lint.yml b/.github/workflows/lint.yml
+new file mode 100644
+index 0000000..bbd8e5d
+--- /dev/null
++++ b/.github/workflows/lint.yml
+@@ -0,0 +1,30 @@
++name: lint
++
++on:
++  push:
++    branches: ["main"]
++  pull_request:
++    paths:
++      - "go.*"
++      - "**/*.go"
++      - ".github/workflows/*.yml"
++
++permissions:
++  contents: read
++
++env:
++  GO_VERSION: '1.23.1'
++
++jobs:
++  lint:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++      - name: Set up Go
++        uses: actions/setup-go@v5
++        with:
++          go-version: ${{ env.GO_VERSION }}
++      - name: golangci-lint
++        uses: golangci/golangci-lint-action@v6
++        with:
++          version: v1.60
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index a9fe1c0..a2f01bb 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -1,40 +1,39 @@
+ name: release
+ 
+ on:
+   push:
+     tags:
+       - 'v*'
+ 
++permissions:
++  id-token: write
++
+ env:
+-  GO_VERSION: '1.23.0'
++  GO_VERSION: '1.23.1'
+ 
+ jobs:
+-  build:
++  release:
+     runs-on: ubuntu-latest
+     steps:
+-    - uses: actions/checkout@v4
+-      with:
+-        fetch-depth: 0
+-    - name: Set up Go
+-      uses: actions/setup-go@v5
+-      with:
+-        go-version: ${{ env.GO_VERSION }}
+-    - name: Build
+-      run: go build -v ./...
+-    - name: Install Cosign
+-      uses: sigstore/cosign-installer@v3
+-      with:
+-        cosign-release: 'v2.2.3'
+-    - name: Store Cosign private key in a file
+-      run: 'echo "$COSIGN_KEY" > cosign.key'
+-      shell: bash
+-      env:
+-        COSIGN_KEY: ${{secrets.COSIGN_KEY}}
+-    - name: Release Binaries
+-      uses: goreleaser/goreleaser-action@v6
+-      with:
+-        version: latest
+-        args: release --clean
+-      env:
+-        GITHUB_TOKEN: ${{secrets.GH_PAT}}
+-        COSIGN_PASSWORD: ${{secrets.COSIGN_PASSWORD}}
++      - uses: actions/checkout@v4
++        with:
++          fetch-depth: 0
++      - name: Set up Go
++        uses: actions/setup-go@v5
++        with:
++          go-version: ${{ env.GO_VERSION }}
++      - name: Build
++        run: go build -v ./...
++      - name: Test
++        run: go test -v ./...
++      - name: Install Cosign
++        uses: sigstore/cosign-installer@v3
++        with:
++          cosign-release: 'v2.2.3'
++      - name: Release Binaries
++        uses: goreleaser/goreleaser-action@v6
++        with:
++          version: latest
++          args: release --clean
++        env:
++          GITHUB_TOKEN: ${{secrets.GH_PAT}}
+diff --git a/.github/workflows/vulncheck.yml b/.github/workflows/vulncheck.yml
+index 092ed53..db473db 100644
+--- a/.github/workflows/vulncheck.yml
++++ b/.github/workflows/vulncheck.yml
+@@ -1,32 +1,31 @@
+ name: vulncheck
+ on:
+   push:
+-    branches: [ "main" ]
++    branches: ["main"]
+   pull_request:
+     paths:
+       - "go.*"
+       - "**/*.go"
+       - ".github/workflows/*.yml"
+ 
+ permissions:
+   contents: read
+ 
+ env:
+-  GO_VERSION: '1.23.0'
++  GO_VERSION: '1.23.1'
+ 
+ jobs:
+   vulncheck:
+     name: vulncheck
+     runs-on: ubuntu-latest
+     steps:
+-    - uses: actions/checkout@v4
+-    - name: Set up Go
+-      uses: actions/setup-go@v5
+-      with:
+-        go-version: ${{ env.GO_VERSION }}
+-    - name: govulncheck
+-      shell: bash
+-      run: |
+-        go install golang.org/x/vuln/cmd/govulncheck@latest
+-        govulncheck ./...
+-
++      - uses: actions/checkout@v4
++      - name: Set up Go
++        uses: actions/setup-go@v5
++        with:
++          go-version: ${{ env.GO_VERSION }}
++      - name: govulncheck
++        shell: bash
++        run: |
++          go install golang.org/x/vuln/cmd/govulncheck@latest
++          govulncheck ./...
+diff --git a/.golangci.yml b/.golangci.yml
+new file mode 100644
+index 0000000..12df18a
+--- /dev/null
++++ b/.golangci.yml
+@@ -0,0 +1,60 @@
++linters:
++  enable:
++    - errcheck
++    - errname
++    - errorlint
++    - goconst
++    - gofumpt
++    - gosimple
++    - govet
++    - ineffassign
++    - nilerr
++    - prealloc
++    - predeclared
++    - revive
++    - rowserrcheck
++    - sqlclosecheck
++    - staticcheck
++    - testifylint
++    - thelper
++    - unconvert
++    - unused
++    - usestdlibvars
++    - wastedassign
++linters-settings:
++  revive:
++    rules:
++      # defaults
++      - name: blank-imports
++      - name: context-as-argument
++        arguments:
++          - allowTypesBefore: "*testing.T"
++      - name: context-keys-type
++      - name: dot-imports
++      - name: empty-block
++      - name: error-naming
++      - name: error-return
++      - name: error-strings
++      - name: errorf
++      - name: exported
++      - name: if-return
++      - name: increment-decrement
++      - name: indent-error-flow
++      - name: package-comments
++      - name: range
++      - name: receiver-naming
++      - name: redefines-builtin-id
++      - name: superfluous-else
++      - name: time-naming
++      - name: unexported-return
++      - name: unreachable-code
++      - name: unused-parameter
++      - name: var-declaration
++      - name: var-naming
++      # additional
++      - name: unnecessary-stmt
++      - name: deep-exit
++      - name: confusing-naming
++      - name: unused-receiver
++      - name: unhandled-error
++        arguments: ["fmt.Print", "fmt.Println", "fmt.Printf", "fmt.Fprintf", "fmt.Fprint"]
+diff --git a/.goreleaser.yaml b/.goreleaser.yml
+similarity index 74%
+rename from .goreleaser.yaml
+rename to .goreleaser.yml
+index 689a601..925536d 100644
+--- a/.goreleaser.yaml
++++ b/.goreleaser.yml
+@@ -1,46 +1,46 @@
+ version: 2
+ 
+ before:
+   hooks:
+     - go mod tidy
+-    - go generate ./...
+ 
+ builds:
+   - env:
+       - CGO_ENABLED=0
+     goos:
+       - linux
+       - darwin
+     goarch:
+       - amd64
+       - arm64
++
+ signs:
+   - cmd: cosign
+-    stdin: "{{ .Env.COSIGN_PASSWORD }}"
++    signature: "${artifact}.sig"
++    certificate: "${artifact}.pem"
+     args:
+       - "sign-blob"
+-      - "--key=cosign.key"
++      - "--oidc-issuer=https://token.actions.githubusercontent.com"
++      - "--output-certificate=${certificate}"
+       - "--output-signature=${signature}"
+       - "${artifact}"
+-      - "--yes" # needed on cosign 2.0.0+
+-    artifacts: all
+-
++      - "--yes"
++    artifacts: checksum
+ 
+ brews:
+   - name: cueitup
+     repository:
+       owner: dhth
+       name: homebrew-tap
+     directory: Formula
+     license: MIT
+     homepage: "https://github.com/dhth/cueitup"
+     description: "Inspect messages in an AWS SQS queue in a simple and deliberate manner"
+ 
+ changelog:
+   sort: asc
+   filters:
+     exclude:
+       - "^docs:"
+       - "^test:"
+       - "^ci:"
+-
 diff --git a/cmd/root.go b/cmd/root.go
 index 9bdc5c8..8d40f9b 100644
 --- a/cmd/root.go
@@ -159,6 +522,159 @@ index 9bdc5c8..8d40f9b 100644
 -
 +	return ui.RenderUI(sqsClient, *queueURL, msgConsumptionConf)
  }
+diff --git a/go.mod b/go.mod
+index 32d834d..4ab9ba2 100644
+--- a/go.mod
++++ b/go.mod
+@@ -1,44 +1,44 @@
+ module github.com/dhth/cueitup
+ 
+-go 1.23.0
++go 1.23.1
+ 
+ require (
+ 	github.com/aws/aws-sdk-go-v2 v1.30.5
+-	github.com/aws/aws-sdk-go-v2/config v1.27.32
+-	github.com/aws/aws-sdk-go-v2/service/sqs v1.34.7
+-	github.com/charmbracelet/bubbles v0.19.0
+-	github.com/charmbracelet/bubbletea v1.1.0
++	github.com/aws/aws-sdk-go-v2/config v1.27.33
++	github.com/aws/aws-sdk-go-v2/service/sqs v1.34.8
++	github.com/charmbracelet/bubbles v0.20.0
++	github.com/charmbracelet/bubbletea v1.1.1
+ 	github.com/charmbracelet/lipgloss v0.13.0
+ 	github.com/tidwall/pretty v1.2.1
+ )
+ 
+ require (
+ 	github.com/atotto/clipboard v0.1.4 // indirect
+-	github.com/aws/aws-sdk-go-v2/credentials v1.17.31 // indirect
++	github.com/aws/aws-sdk-go-v2/credentials v1.17.32 // indirect
+ 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.13 // indirect
+ 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.17 // indirect
+ 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.17 // indirect
+ 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.4 // indirect
+ 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.19 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/sso v1.22.6 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.26.6 // indirect
+-	github.com/aws/aws-sdk-go-v2/service/sts v1.30.6 // indirect
++	github.com/aws/aws-sdk-go-v2/service/sso v1.22.7 // indirect
++	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.26.7 // indirect
++	github.com/aws/aws-sdk-go-v2/service/sts v1.30.7 // indirect
+ 	github.com/aws/smithy-go v1.20.4 // indirect
+ 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+-	github.com/charmbracelet/x/ansi v0.2.3 // indirect
++	github.com/charmbracelet/x/ansi v0.3.1 // indirect
+ 	github.com/charmbracelet/x/term v0.2.0 // indirect
+ 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
+ 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+ 	github.com/mattn/go-isatty v0.0.20 // indirect
+ 	github.com/mattn/go-localereader v0.0.1 // indirect
+ 	github.com/mattn/go-runewidth v0.0.16 // indirect
+ 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
+ 	github.com/muesli/cancelreader v0.2.2 // indirect
+ 	github.com/muesli/termenv v0.15.2 // indirect
+ 	github.com/rivo/uniseg v0.4.7 // indirect
+ 	github.com/sahilm/fuzzy v0.1.1 // indirect
+ 	golang.org/x/sync v0.8.0 // indirect
+-	golang.org/x/sys v0.24.0 // indirect
+-	golang.org/x/text v0.17.0 // indirect
++	golang.org/x/sys v0.25.0 // indirect
++	golang.org/x/text v0.18.0 // indirect
+ )
+diff --git a/go.sum b/go.sum
+index d44d80e..7c908a1 100644
+--- a/go.sum
++++ b/go.sum
+@@ -1,50 +1,50 @@
+ github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=
+ github.com/atotto/clipboard v0.1.4/go.mod h1:ZY9tmq7sm5xIbd9bOK4onWV4S6X0u6GY7Vn0Yu86PYI=
+ github.com/aws/aws-sdk-go-v2 v1.30.5 h1:mWSRTwQAb0aLE17dSzztCVJWI9+cRMgqebndjwDyK0g=
+ github.com/aws/aws-sdk-go-v2 v1.30.5/go.mod h1:CT+ZPWXbYrci8chcARI3OmI/qgd+f6WtuLOoaIA8PR0=
+-github.com/aws/aws-sdk-go-v2/config v1.27.32 h1:jnAMVTJTpAQlePCUUlnXnllHEMGVWmvUJOiGjgtS9S0=
+-github.com/aws/aws-sdk-go-v2/config v1.27.32/go.mod h1:JibtzKJoXT0M/MhoYL6qfCk7nm/MppwukDFZtdgVRoY=
+-github.com/aws/aws-sdk-go-v2/credentials v1.17.31 h1:jtyfcOfgoqWA2hW/E8sFbwdfgwD3APnF9CLCKE8dTyw=
+-github.com/aws/aws-sdk-go-v2/credentials v1.17.31/go.mod h1:RSgY5lfCfw+FoyKWtOpLolPlfQVdDBQWTUniAaE+NKY=
++github.com/aws/aws-sdk-go-v2/config v1.27.33 h1:Nof9o/MsmH4oa0s2q9a0k7tMz5x/Yj5k06lDODWz3BU=
++github.com/aws/aws-sdk-go-v2/config v1.27.33/go.mod h1:kEqdYzRb8dd8Sy2pOdEbExTTF5v7ozEXX0McgPE7xks=
++github.com/aws/aws-sdk-go-v2/credentials v1.17.32 h1:7Cxhp/BnT2RcGy4VisJ9miUPecY+lyE9I8JvcZofn9I=
++github.com/aws/aws-sdk-go-v2/credentials v1.17.32/go.mod h1:P5/QMF3/DCHbXGEGkdbilXHsyTBX5D3HSwcrSc9p20I=
+ github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.13 h1:pfQ2sqNpMVK6xz2RbqLEL0GH87JOwSxPV2rzm8Zsb74=
+ github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.13/go.mod h1:NG7RXPUlqfsCLLFfi0+IpKN4sCB9D9fw/qTaSB+xRoU=
+ github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.17 h1:pI7Bzt0BJtYA0N/JEC6B8fJ4RBrEMi1LBrkMdFYNSnQ=
+ github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.17/go.mod h1:Dh5zzJYMtxfIjYW+/evjQ8uj2OyR/ve2KROHGHlSFqE=
+ github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.17 h1:Mqr/V5gvrhA2gvgnF42Zh5iMiQNcOYthFYwCyrnuWlc=
+ github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.17/go.mod h1:aLJpZlCmjE+V+KtN1q1uyZkfnUWpQGpbsn89XPKyzfU=
+ github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1 h1:VaRN3TlFdd6KxX1x3ILT5ynH6HvKgqdiXoTxAF4HQcQ=
+ github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1/go.mod h1:FbtygfRFze9usAadmnGJNc8KsP346kEe+y2/oyhGAGc=
+ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.4 h1:KypMCbLPPHEmf9DgMGw51jMj77VfGPAN2Kv4cfhlfgI=
+ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.4/go.mod h1:Vz1JQXliGcQktFTN/LN6uGppAIRoLBR2bMvIMP0gOjc=
+ github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.19 h1:rfprUlsdzgl7ZL2KlXiUAoJnI/VxfHCvDFr2QDFj6u4=
+ github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.19/go.mod h1:SCWkEdRq8/7EK60NcvvQ6NXKuTcchAD4ROAsC37VEZE=
+-github.com/aws/aws-sdk-go-v2/service/sqs v1.34.7 h1:RxETYGXhRlRxL96mtab1lQ9fPVPIJFXuOI3uRL/MuHI=
+-github.com/aws/aws-sdk-go-v2/service/sqs v1.34.7/go.mod h1:zn0Oy7oNni7XIGoAd6bHBTVtX06OrnpvT1kww8jxyi8=
+-github.com/aws/aws-sdk-go-v2/service/sso v1.22.6 h1:o++HUDXlbrTl4PSal3YHtdErQxB8mDGAtkKNXBWPfIU=
+-github.com/aws/aws-sdk-go-v2/service/sso v1.22.6/go.mod h1:eEygMHnTKH/3kNp9Jr1n3PdejuSNcgwLe1dWgQtO0VQ=
+-github.com/aws/aws-sdk-go-v2/service/ssooidc v1.26.6 h1:yCHcQCOwTfIsc8DoEhM3qXPxD+j8CbI6t1K3dNzsWV0=
+-github.com/aws/aws-sdk-go-v2/service/ssooidc v1.26.6/go.mod h1:bCbAxKDqNvkHxRaIMnyVPXPo+OaPRwvmgzMxbz1VKSA=
+-github.com/aws/aws-sdk-go-v2/service/sts v1.30.6 h1:TrQadF7GcqvQ63kgwEcjlrVc2Fa0wpgLT0xtc73uAd8=
+-github.com/aws/aws-sdk-go-v2/service/sts v1.30.6/go.mod h1:NXi1dIAGteSaRLqYgarlhP/Ij0cFT+qmCwiJqWh/U5o=
++github.com/aws/aws-sdk-go-v2/service/sqs v1.34.8 h1:t3TzmBX0lpDNtLhl7vY97VMvLtxp/KTvjjj2X3s6SUQ=
++github.com/aws/aws-sdk-go-v2/service/sqs v1.34.8/go.mod h1:zn0Oy7oNni7XIGoAd6bHBTVtX06OrnpvT1kww8jxyi8=
++github.com/aws/aws-sdk-go-v2/service/sso v1.22.7 h1:pIaGg+08llrP7Q5aiz9ICWbY8cqhTkyy+0SHvfzQpTc=
++github.com/aws/aws-sdk-go-v2/service/sso v1.22.7/go.mod h1:eEygMHnTKH/3kNp9Jr1n3PdejuSNcgwLe1dWgQtO0VQ=
++github.com/aws/aws-sdk-go-v2/service/ssooidc v1.26.7 h1:/Cfdu0XV3mONYKaOt1Gr0k1KvQzkzPyiKUdlWJqy+J4=
++github.com/aws/aws-sdk-go-v2/service/ssooidc v1.26.7/go.mod h1:bCbAxKDqNvkHxRaIMnyVPXPo+OaPRwvmgzMxbz1VKSA=
++github.com/aws/aws-sdk-go-v2/service/sts v1.30.7 h1:NKTa1eqZYw8tiHSRGpP0VtTdub/8KNk8sDkNPFaOKDE=
++github.com/aws/aws-sdk-go-v2/service/sts v1.30.7/go.mod h1:NXi1dIAGteSaRLqYgarlhP/Ij0cFT+qmCwiJqWh/U5o=
+ github.com/aws/smithy-go v1.20.4 h1:2HK1zBdPgRbjFOHlfeQZfpC4r72MOb9bZkiFwggKO+4=
+ github.com/aws/smithy-go v1.20.4/go.mod h1:irrKGvNn1InZwb2d7fkIRNucdfwR8R+Ts3wxYa/cJHg=
+ github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiErDT4WkJ2k=
+ github.com/aymanbagabas/go-osc52/v2 v2.0.1/go.mod h1:uYgXzlJ7ZpABp8OJ+exZzJJhRNQ2ASbcXHWsFqH8hp8=
+-github.com/charmbracelet/bubbles v0.19.0 h1:gKZkKXPP6GlDk6EcfujDK19PCQqRjaJZQ7QRERx1UF0=
+-github.com/charmbracelet/bubbles v0.19.0/go.mod h1:WILteEqZ+krG5c3ntGEMeG99nCupcuIk7V0/zOP0tOA=
+-github.com/charmbracelet/bubbletea v1.1.0 h1:FjAl9eAL3HBCHenhz/ZPjkKdScmaS5SK69JAK2YJK9c=
+-github.com/charmbracelet/bubbletea v1.1.0/go.mod h1:9Ogk0HrdbHolIKHdjfFpyXJmiCzGwy+FesYkZr7hYU4=
++github.com/charmbracelet/bubbles v0.20.0 h1:jSZu6qD8cRQ6k9OMfR1WlM+ruM8fkPWkHvQWD9LIutE=
++github.com/charmbracelet/bubbles v0.20.0/go.mod h1:39slydyswPy+uVOHZ5x/GjwVAFkCsV8IIVy+4MhzwwU=
++github.com/charmbracelet/bubbletea v1.1.1 h1:KJ2/DnmpfqFtDNVTvYZ6zpPFL9iRCRr0qqKOCvppbPY=
++github.com/charmbracelet/bubbletea v1.1.1/go.mod h1:9Ogk0HrdbHolIKHdjfFpyXJmiCzGwy+FesYkZr7hYU4=
+ github.com/charmbracelet/lipgloss v0.13.0 h1:4X3PPeoWEDCMvzDvGmTajSyYPcZM4+y8sCA/SsA3cjw=
+ github.com/charmbracelet/lipgloss v0.13.0/go.mod h1:nw4zy0SBX/F/eAO1cWdcvy6qnkDUxr8Lw7dvFrAIbbY=
+-github.com/charmbracelet/x/ansi v0.2.3 h1:VfFN0NUpcjBRd4DnKfRaIRo53KRgey/nhOoEqosGDEY=
+-github.com/charmbracelet/x/ansi v0.2.3/go.mod h1:dk73KoMTT5AX5BsX0KrqhsTqAnhZZoCBjs7dGWp4Ktw=
++github.com/charmbracelet/x/ansi v0.3.1 h1:CRO6lc/6HCx2/D6S/GZ87jDvRvk6GtPyFP+IljkNtqI=
++github.com/charmbracelet/x/ansi v0.3.1/go.mod h1:dk73KoMTT5AX5BsX0KrqhsTqAnhZZoCBjs7dGWp4Ktw=
+ github.com/charmbracelet/x/term v0.2.0 h1:cNB9Ot9q8I711MyZ7myUR5HFWL/lc3OpU8jZ4hwm0x0=
+ github.com/charmbracelet/x/term v0.2.0/go.mod h1:GVxgxAbjUrmpvIINHIQnJJKpMlHiZ4cktEQCN6GWyF0=
+ github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f h1:Y/CXytFA4m6baUTXGLOoWe4PQhGxaX0KpnayAqC48p4=
+ github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f/go.mod h1:vw97MGsxSvLiUE2X8qFplwetxpGLQrlU1Q9AUEIzCaM=
+ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
+ github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
+ github.com/lucasb-eyer/go-colorful v1.2.0 h1:1nnpGOrhyZZuNyfu1QjKiUICQ74+3FNCN69Aj6K7nkY=
+ github.com/lucasb-eyer/go-colorful v1.2.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
+ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
+ github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
+@@ -62,14 +62,14 @@ github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJ
+ github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
+ github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
+ github.com/sahilm/fuzzy v0.1.1 h1:ceu5RHF8DGgoi+/dR5PsECjCDH1BE3Fnmpo7aVXOdRA=
+ github.com/sahilm/fuzzy v0.1.1/go.mod h1:VFvziUEIMCrT6A6tw2RFIXPXXmzXbOsSHF0DOI8ZK9Y=
+ github.com/tidwall/pretty v1.2.1 h1:qjsOFOWWQl+N3RsoF5/ssm1pHmJJwhjlSbZ51I6wMl4=
+ github.com/tidwall/pretty v1.2.1/go.mod h1:ITEVvHYasfjBbM0u2Pg8T2nJnzm8xPwvNhhsoaGGjNU=
+ golang.org/x/sync v0.8.0 h1:3NFvSEYkUoMifnESzZl15y791HH1qU2xm6eCJU5ZPXQ=
+ golang.org/x/sync v0.8.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
+ golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+ golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+-golang.org/x/sys v0.24.0 h1:Twjiwq9dn6R1fQcyiK+wQyHWfaz/BJB+YIpzU/Cv3Xg=
+-golang.org/x/sys v0.24.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+-golang.org/x/text v0.17.0 h1:XtiM5bkSOt+ewxlOE/aE/AKEHibwj/6gvWMl9Rsh0Qc=
+-golang.org/x/text v0.17.0/go.mod h1:BuEKDfySbSR4drPmRPG/7iBdf8hvFMuRexcpahXilzY=
++golang.org/x/sys v0.25.0 h1:r+8e+loiHxRqhXVl6ML1nO3l1+oFoWbnlu2Ehimmi34=
++golang.org/x/sys v0.25.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
++golang.org/x/text v0.18.0 h1:XvMDiNzPAl0jr17s6W9lcaIhGUfUORdGCNsuLmPG224=
++golang.org/x/text v0.18.0/go.mod h1:BuEKDfySbSR4drPmRPG/7iBdf8hvFMuRexcpahXilzY=
 diff --git a/cueitup.go b/main.go
 similarity index 54%
 rename from cueitup.go
@@ -911,6 +1427,14 @@ index f13c6e7..381c448 100644
 +	_, err := p.Run()
 +	return err
  }
+diff --git a/yamlfmt.yml b/yamlfmt.yml
+new file mode 100644
+index 0000000..9d3236a
+--- /dev/null
++++ b/yamlfmt.yml
+@@ -0,0 +1,2 @@
++formatter:
++  retain_line_breaks_single: true
 ```
 
 </details>
@@ -920,22 +1444,22 @@ index f13c6e7..381c448 100644
 <details><summary> expand </summary>
 
 ```diff
-diff --git a/5c52f68/cmd/root.go b/941d77f/cmd/root.go
+diff --git a/5c52f68/cmd/root.go b/11a0436/cmd/root.go
 index 7e245d5..a1c36f6 100644
 --- a/5c52f68/cmd/root.go
-+++ b/941d77f/cmd/root.go
++++ b/11a0436/cmd/root.go
 @@ -1,2 +1 @@
 -func die(msg string, args ...any)
 -func Execute()
 +func Execute() error
-diff --git a/5c52f68/cueitup.go b/941d77f/main.go
+diff --git a/5c52f68/cueitup.go b/11a0436/main.go
 similarity index 100%
 rename from 5c52f68/cueitup.go
-rename to 941d77f/main.go
-diff --git a/5c52f68/ui/model/cmds.go b/941d77f/ui/model/cmds.go
+rename to 11a0436/main.go
+diff --git a/5c52f68/ui/model/cmds.go b/11a0436/ui/model/cmds.go
 index 35aaf4d..e429709 100644
 --- a/5c52f68/ui/model/cmds.go
-+++ b/941d77f/ui/model/cmds.go
++++ b/11a0436/ui/model/cmds.go
 @@ -1,2 +1,2 @@
 -func DeleteMessages(client *sqs.Client, queueUrl string, messages []types.Message) tea.Cmd
 -func GetQueueMsgCount(client *sqs.Client, queueUrl string) tea.Cmd
@@ -944,17 +1468,17 @@ index 35aaf4d..e429709 100644
 @@ -8 +8 @@ func hideHelp(interval time.Duration) tea.Cmd
 -func (m model) FetchMessages(maxMessages int32, waitTime int32) tea.Cmd
 +func (m Model) FetchMessages(maxMessages int32, waitTime int32) tea.Cmd
-diff --git a/5c52f68/ui/model/initial.go b/941d77f/ui/model/initial.go
+diff --git a/5c52f68/ui/model/initial.go b/11a0436/ui/model/initial.go
 index 1381c76..7654528 100644
 --- a/5c52f68/ui/model/initial.go
-+++ b/941d77f/ui/model/initial.go
++++ b/11a0436/ui/model/initial.go
 @@ -1 +1 @@
 -func InitialModel(sqsClient *sqs.Client, queueUrl string, msgConsumptionConf MsgConsumptionConf) model
 +func InitialModel(sqsClient *sqs.Client, queueURL string, msgConsumptionConf MsgConsumptionConf) Model
-diff --git a/5c52f68/ui/model/model.go b/941d77f/ui/model/model.go
+diff --git a/5c52f68/ui/model/model.go b/11a0436/ui/model/model.go
 index 30e48cb..992323e 100644
 --- a/5c52f68/ui/model/model.go
-+++ b/941d77f/ui/model/model.go
++++ b/11a0436/ui/model/model.go
 @@ -8 +8 @@ type MsgConsumptionConf struct {
 -type model struct {
 +type Model struct {
@@ -964,10 +1488,10 @@ index 30e48cb..992323e 100644
 @@ -38 +38 @@ type model struct {
 -func (m model) Init() tea.Cmd
 +func (m Model) Init() tea.Cmd
-diff --git a/5c52f68/ui/model/msgs.go b/941d77f/ui/model/msgs.go
+diff --git a/5c52f68/ui/model/msgs.go b/11a0436/ui/model/msgs.go
 index 38d7c0c..48a036f 100644
 --- a/5c52f68/ui/model/msgs.go
-+++ b/941d77f/ui/model/msgs.go
++++ b/11a0436/ui/model/msgs.go
 @@ -1,2 +1,4 @@
 -type MsgCountTickMsg struct{}
 -type HideHelpMsg struct{}
@@ -975,24 +1499,24 @@ index 38d7c0c..48a036f 100644
 +	MsgCountTickMsg struct{}
 +	HideHelpMsg     struct{}
 +)
-diff --git a/5c52f68/ui/model/update.go b/941d77f/ui/model/update.go
-index bf16682..3a8f3d0 100644
+diff --git a/5c52f68/ui/model/update.go b/11a0436/ui/model/update.go
+index 09d4d9e..63ebf89 100644
 --- a/5c52f68/ui/model/update.go
-+++ b/941d77f/ui/model/update.go
++++ b/11a0436/ui/model/update.go
 @@ -1 +1 @@
--func (m model) Update(tea.Model, tea.Cmd)
-+func (m Model) Update(tea.Model, tea.Cmd)
-diff --git a/5c52f68/ui/model/view.go b/941d77f/ui/model/view.go
+-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd)
++func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd)
+diff --git a/5c52f68/ui/model/view.go b/11a0436/ui/model/view.go
 index c62ab48..80c398e 100644
 --- a/5c52f68/ui/model/view.go
-+++ b/941d77f/ui/model/view.go
++++ b/11a0436/ui/model/view.go
 @@ -1 +1 @@
 -func (m model) View() string
 +func (m Model) View() string
-diff --git a/5c52f68/ui/ui.go b/941d77f/ui/ui.go
+diff --git a/5c52f68/ui/ui.go b/11a0436/ui/ui.go
 index f8e0ecf..ebdc12a 100644
 --- a/5c52f68/ui/ui.go
-+++ b/941d77f/ui/ui.go
++++ b/11a0436/ui/ui.go
 @@ -1 +1 @@
 -func RenderUI(sqsClient *sqs.Client, queueUrl string, msgConsumptionConf model.MsgConsumptionConf)
 +func RenderUI(sqsClient *sqs.Client, queueURL string, msgConsumptionConf model.MsgConsumptionConf) error
